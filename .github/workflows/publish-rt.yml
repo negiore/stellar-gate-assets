@@ -1,0 +1,25 @@
+# Joins the staged parts of rt.tar, checks its SHA-256, publishes it as a release asset, then removes the staging branch.
+# Run by hand: Actions -> "Publish MTP layer" -> Run workflow.
+name: Publish MTP layer
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: staging-rt
+      - name: Join the parts and check SHA-256
+        run: |
+          cat rt.tar.part-* > rt.tar
+          echo "a29a9b5e40a9e17b5d81e359db720ec8481e56211d0eed0f19bf7999209532f4  rt.tar" | sha256sum -c -
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create mtp-rt-strata-v0.2.9 rt.tar --repo "$GITHUB_REPOSITORY" --title "MTP layer for Strata v0.2.9" --notes-file notes.md
+      - name: Remove the staging branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/staging-rt"
